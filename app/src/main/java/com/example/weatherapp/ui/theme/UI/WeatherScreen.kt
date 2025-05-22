@@ -35,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +52,10 @@ import com.example.weatherapp.repositories.WeatherRepository
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.weatherapp.viewmodel.WeatherViewModel
+import com.example.weatherapp.viewmodel.WeatherViewModelFactory
+import androidx.compose.runtime.collectAsState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,21 +67,16 @@ fun WeatherScreen(
     cityRu: String,
     navigateBack: () -> Unit
 ) {
-    var weatherData by remember { mutableStateOf<WeatherResponse?>(null) }
-    var cityCoordinates by remember { mutableStateOf<NetworkCity?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
+
+    val viewModel: WeatherViewModel = viewModel(
+        factory = WeatherViewModelFactory(cityRepository, weatherRepository)
+    )
+
+    val isLoading by viewModel.isLoading.collectAsState()
+    val weatherData by viewModel.weatherData.collectAsState()
 
     LaunchedEffect(cityName) {
-        isLoading = true
-        val cityResponse = cityRepository.getCityByName(cityName)
-        cityCoordinates = cityResponse.firstOrNull { it.name == cityName }
-
-        cityCoordinates?.let {
-            val weatherResponse = weatherRepository.getWeather(it.latitude, it.longitude)
-            weatherData = weatherResponse
-        }
-
-        isLoading = false
+        viewModel.loadWeather(cityName)
     }
 
     Column(
@@ -141,6 +138,7 @@ fun WeatherScreen(
                 )
             }
         }
+
     }
 }
 
